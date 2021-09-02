@@ -4,6 +4,8 @@
 package app
 
 import (
+	"encoding/json"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
@@ -21,6 +23,8 @@ import (
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ecocredittypes "github.com/regen-network/regen-ledger/x/ecocredit"
+	abci "github.com/tendermint/tendermint/abci/types"
+
 
 	"github.com/regen-network/regen-ledger/types/module/server"
 )
@@ -72,7 +76,13 @@ func (app *RegenApp) registerUpgradeHandlers() {
 
 		gen := ecocredittypes.DefaultGenesisState()
 		gen.Params.AllowlistEnabled = true
-		app.mm.Modules[ecocredittypes.ModuleName].InitGenesis(ctx, app.appCodec, app.cdc.MustMarshalJSON(gen))
+
+		modules := make(map[string]json.RawMessage)
+
+		
+		modules[ecocredittypes.ModuleName] = app.cdc.MustMarshalJSON(gen)
+
+		app.smm.InitGenesis(ctx, modules, []abci.ValidatorUpdate{})
 
 		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
 	})

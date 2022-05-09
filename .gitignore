@@ -174,7 +174,6 @@ tags
 # End of https://www.gitignore.io/api/go,vim,emacs,intellij
 /.xrnd
 
-
 # vscode
 .vscode
 
@@ -182,9 +181,8 @@ tags
 .idea
 
 build/
+third_party/
 
-# swagger-gen
-/tmp-swagger-gen
 # OS
 .DS_Store
 
@@ -199,3 +197,4 @@ dist/
 # Data - ideally these don't exist
 .testnets
 .localnet
+

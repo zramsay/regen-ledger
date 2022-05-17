@@ -99,6 +99,12 @@ import (
 	ecocreditmodule "github.com/regen-network/regen-ledger/x/ecocredit/module"
 	ecoServer "github.com/regen-network/regen-ledger/x/ecocredit/server"
 
+	// alloc WIP
+	allocmodule "github.com/public-awesome/stargaze/v5/x/alloc"
+	allocmodulekeeper "github.com/public-awesome/stargaze/v5/x/alloc/keeper"
+	allocmoduletypes "github.com/public-awesome/stargaze/v5/x/alloc/types"
+
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/regen-network/regen-ledger/v3/client/docs/statik"
 )
@@ -138,6 +144,7 @@ var (
 			authzmodule.AppModuleBasic{},
 			ecocreditmodule.Module{},
 			data.Module{},
+			allocmodule.AppModuleBasic{},
 		}, setCustomModuleBasics()...)...,
 	)
 
@@ -153,6 +160,7 @@ var (
 			ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 			ecocredit.ModuleName:           {authtypes.Burner},
 			basket.BasketSubModuleName:     {authtypes.Burner, authtypes.Minter},
+			allocmoduletypes.ModuleName:    {authtypes.Minter, authtypes.Burner, authtypes.Staking},
 		}
 
 		for k, v := range setCustomMaccPerms() {
@@ -207,6 +215,9 @@ type RegenApp struct {
 	// nolint
 	wasmKeeper wasm.Keeper
 
+	AllocKeeper allocmodulekeeper.Keeper
+	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
+
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
 	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
@@ -259,6 +270,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 			evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, feegrant.StoreKey,
 			authzkeeper.StoreKey,
+			allocmoduletypes.StoreKey,
 		}, setCustomKVStoreKeys()...)...,
 	)
 
@@ -376,6 +388,20 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 	)
 	app.AuthzKeeper = authzKeeper
 
+	// looks like regen is doing diff than stars ( := vs *pointer)
+	app.AllocKeeper = *allocmodulekeeper.NewKeeper(
+		appCodec,
+		keys[allocmoduletypes.StoreKey],
+		keys[allocmoduletypes.MemStoreKey],
+
+		app.AccountKeeper,
+		app.BankKeeper,
+		app.StakingKeeper,
+		app.DistrKeeper,
+		app.GetSubspace(allocmoduletypes.ModuleName),
+	)
+	allocModule := allocmodule.NewAppModule(appCodec, app.AllocKeeper)
+
 	// register custom modules here
 	app.smm = setCustomModules(app, interfaceRegistry)
 	ecocreditModule := ecocreditmodule.NewModule(
@@ -428,6 +454,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			authzmodule.NewAppModule(appCodec, app.AuthzKeeper, app.AccountKeeper, app.BankKeeper, app.interfaceRegistry),
 			ibc.NewAppModule(app.IBCKeeper),
 			params.NewAppModule(app.ParamsKeeper),
+			allocModule,
 			transferModule,
 		}, app.setCustomModuleManager()...)...,
 	)
@@ -442,6 +469,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			upgradetypes.ModuleName,
 			capabilitytypes.ModuleName,
 			minttypes.ModuleName,
+			allocmoduletypes.ModuleName, // must run before distribution begin blocker
 			distrtypes.ModuleName,
 			slashingtypes.ModuleName,
 			evidencetypes.ModuleName,
@@ -479,6 +507,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			paramstypes.ModuleName,
 			upgradetypes.ModuleName,
 			vestingtypes.ModuleName,
+			allocmoduletypes.ModuleName,
 
 			// ibc modules
 			ibchost.ModuleName,
@@ -508,6 +537,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			vestingtypes.ModuleName,
 			paramstypes.ModuleName,
 			upgradetypes.ModuleName,
+			allocmoduletypes.ModuleName,
 
 			// ibc modules
 			ibctransfertypes.ModuleName,
@@ -757,6 +787,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 	paramsKeeper.Subspace(ecocredit.DefaultParamspace)
+	paramsKeeper.Subspace(allocmoduletypes.ModuleName)
 	initCustomParamsKeeper(&paramsKeeper)
 
 	return paramsKeeper

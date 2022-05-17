@@ -507,7 +507,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			paramstypes.ModuleName,
 			upgradetypes.ModuleName,
 			vestingtypes.ModuleName,
-			allocmoduletypes.ModuleName, claimmoduletypes.ModuleName,
+			allocmoduletypes.ModuleName,
 
 			// ibc modules
 			ibchost.ModuleName,

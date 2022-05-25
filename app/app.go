@@ -26,6 +26,10 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/tendermint/budget/x/budget"
+	budgetkeeper "github.com/tendermint/budget/x/budget/keeper"
+	budgettypes "github.com/tendermint/budget/x/budget/types"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -138,6 +142,7 @@ var (
 			authzmodule.AppModuleBasic{},
 			ecocreditmodule.Module{},
 			data.Module{},
+			budget.AppModuleBasic{},
 		}, setCustomModuleBasics()...)...,
 	)
 
@@ -153,6 +158,7 @@ var (
 			ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 			ecocredit.ModuleName:           {authtypes.Burner},
 			basket.BasketSubModuleName:     {authtypes.Burner, authtypes.Minter},
+			budgettypes.ModuleName:		nil,
 		}
 
 		for k, v := range setCustomMaccPerms() {
@@ -203,7 +209,7 @@ type RegenApp struct {
 	TransferKeeper   ibctransferkeeper.Keeper
 	FeeGrantKeeper   feegrantkeeper.Keeper
 	AuthzKeeper      authzkeeper.Keeper
-
+	BudgetKeeper	 budgetkeeper.Keeper
 	// nolint
 	wasmKeeper wasm.Keeper
 
@@ -259,6 +265,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 			evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, feegrant.StoreKey,
 			authzkeeper.StoreKey,
+			budgettypes.StoreKey,
 		}, setCustomKVStoreKeys()...)...,
 	)
 
@@ -327,6 +334,9 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 	app.StakingKeeper = *stakingKeeper.SetHooks(
 		stakingtypes.NewMultiStakingHooks(app.DistrKeeper.Hooks(), app.SlashingKeeper.Hooks()),
 	)
+
+	blockedAddrs := map[string]bool{}
+	app.BudgetKeeper = budgetkeeper.NewKeeper(appCodec, keys[budgettypes.StoreKey], app.GetSubspace(budgettypes.ModuleName), app.AccountKeeper, app.BankKeeper, blockedAddrs)
 
 	// Create IBC Keeper
 	app.IBCKeeper = ibckeeper.NewKeeper(
@@ -429,6 +439,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			ibc.NewAppModule(app.IBCKeeper),
 			params.NewAppModule(app.ParamsKeeper),
 			transferModule,
+			budget.NewAppModule(appCodec, app.BudgetKeeper, app.AccountKeeper, app.BankKeeper),
 		}, app.setCustomModuleManager()...)...,
 	)
 
@@ -455,6 +466,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			feegrant.ModuleName,
 			paramstypes.ModuleName,
 			vestingtypes.ModuleName,
+			budgettypes.ModuleName,
 
 			// ibc modules
 			ibchost.ModuleName,
@@ -479,6 +491,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			paramstypes.ModuleName,
 			upgradetypes.ModuleName,
 			vestingtypes.ModuleName,
+			budgettypes.ModuleName,
 
 			// ibc modules
 			ibchost.ModuleName,
@@ -508,6 +521,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			vestingtypes.ModuleName,
 			paramstypes.ModuleName,
 			upgradetypes.ModuleName,
+			budgettypes.ModuleName,
 
 			// ibc modules
 			ibctransfertypes.ModuleName,
@@ -542,6 +556,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			transferModule,
 			ecocreditmodule.NewModule(app.GetSubspace(ecocredit.DefaultParamspace), app.AccountKeeper, app.BankKeeper, app.DistrKeeper),
 			data.NewModule(app.AccountKeeper, app.BankKeeper),
+			budget.NewAppModule(appCodec, app.BudgetKeeper, app.AccountKeeper, app.BankKeeper),
 		}, app.setCustomSimulationManager()...)...,
 	)
 
@@ -628,6 +643,7 @@ func (app *RegenApp) LoadHeight(height int64) error {
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.
+// seems like this is the function to query to get the addresss
 func (app *RegenApp) ModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
 	for acc := range maccPerms {
@@ -757,6 +773,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 	paramsKeeper.Subspace(ecocredit.DefaultParamspace)
+	paramsKeeper.Subspace(budgettypes.ModuleName)
 	initCustomParamsKeeper(&paramsKeeper)
 
 	return paramsKeeper

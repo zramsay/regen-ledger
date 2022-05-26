@@ -40,6 +40,9 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/regen-network/regen-ledger/v4/app"
+
+	budgetcli "github.com/tendermint/budget/x/budget/client/cli"
+
 )
 
 // NewRootCmd creates a new root command for regen. It is called once in the
@@ -188,6 +191,7 @@ func queryCommand() *cobra.Command {
 		rpc.BlockCommand(),
 		authcmd.QueryTxsByEventsCmd(),
 		authcmd.QueryTxCmd(),
+		budgetcli.GetQueryCmd(),
 	)
 
 	app.ModuleBasics.AddQueryCommands(cmd)

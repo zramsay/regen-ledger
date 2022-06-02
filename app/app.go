@@ -158,7 +158,7 @@ var (
 			ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 			ecocredit.ModuleName:           {authtypes.Burner},
 			basket.BasketSubModuleName:     {authtypes.Burner, authtypes.Minter},
-			budgettypes.ModuleName:		nil,
+			budgettypes.ModuleName:         nil,
 		}
 
 		for k, v := range setCustomMaccPerms() {
@@ -209,7 +209,7 @@ type RegenApp struct {
 	TransferKeeper   ibctransferkeeper.Keeper
 	FeeGrantKeeper   feegrantkeeper.Keeper
 	AuthzKeeper      authzkeeper.Keeper
-	BudgetKeeper	 budgetkeeper.Keeper
+	BudgetKeeper     budgetkeeper.Keeper
 	// nolint
 	wasmKeeper wasm.Keeper
 
@@ -264,8 +264,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 			govtypes.StoreKey, paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey,
 			evidencetypes.StoreKey, ibctransfertypes.StoreKey, capabilitytypes.StoreKey, feegrant.StoreKey,
-			authzkeeper.StoreKey,
-			budgettypes.StoreKey,
+			authzkeeper.StoreKey, budgettypes.StoreKey,
 		}, setCustomKVStoreKeys()...)...,
 	)
 
@@ -335,8 +334,10 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 		stakingtypes.NewMultiStakingHooks(app.DistrKeeper.Hooks(), app.SlashingKeeper.Hooks()),
 	)
 
-	blockedAddrs := map[string]bool{}
-	app.BudgetKeeper = budgetkeeper.NewKeeper(appCodec, keys[budgettypes.StoreKey], app.GetSubspace(budgettypes.ModuleName), app.AccountKeeper, app.BankKeeper, blockedAddrs)
+	app.BudgetKeeper = budgetkeeper.NewKeeper(
+		appCodec, keys[budgettypes.StoreKey], app.GetSubspace(budgettypes.ModuleName), app.AccountKeeper,
+		app.BankKeeper, app.ModuleAccountAddrs(),
+	)
 
 	// Create IBC Keeper
 	app.IBCKeeper = ibckeeper.NewKeeper(
@@ -453,6 +454,7 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			upgradetypes.ModuleName,
 			capabilitytypes.ModuleName,
 			minttypes.ModuleName,
+			budgettypes.ModuleName,
 			distrtypes.ModuleName,
 			slashingtypes.ModuleName,
 			evidencetypes.ModuleName,
@@ -466,7 +468,6 @@ func NewRegenApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 			feegrant.ModuleName,
 			paramstypes.ModuleName,
 			vestingtypes.ModuleName,
-			budgettypes.ModuleName,
 
 			// ibc modules
 			ibchost.ModuleName,

@@ -158,7 +158,7 @@ var (
 			ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 			ecocredit.ModuleName:           {authtypes.Burner},
 			basket.BasketSubModuleName:     {authtypes.Burner, authtypes.Minter},
-			budgettypes.ModuleName:		{authtypes.Minter},
+			budgettypes.ModuleName:		nil,
 		}
 
 		for k, v := range setCustomMaccPerms() {
